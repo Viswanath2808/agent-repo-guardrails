@@ -75,6 +75,12 @@ dependencies — every script uses `node:` built-ins only, so there is no instal
 After install, the session-start ritual runs on the next session. The doc gate runs when you call
 it. The guard does nothing until you turn it on (section 4.3).
 
+**If you install while an editor is open, restart it.** Measured once, 2026-11-04, in the VS Code
+extension: the plugin was installed from a terminal (`claude plugin install …`, since the editor
+pane has no `/plugin` command) while a session was open. `/clear` in that session did not run the
+ritual; closing and reopening the window did. If the first new session prints no block, restart
+the editor before concluding the install failed.
+
 ## 4. The three pieces
 
 All configuration lives in one optional file, `<your repo>/.claude/guardrails.json`. Absent means
