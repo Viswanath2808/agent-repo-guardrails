@@ -1,0 +1,13 @@
+{
+  "name": "agent-repo-guardrails",
+  "owner": {
+    "name": "Viswanath2808"
+  },
+  "plugins": [
+    {
+      "name": "agent-repo-guardrails",
+      "source": "./",
+      "description": "Session-start status ritual, doc-size budget, and an optional pre-tool refusal of human-only commands for a long-running agentic repo. Reference implementation + threat model + measured failure modes."
+    }
+  ]
+}

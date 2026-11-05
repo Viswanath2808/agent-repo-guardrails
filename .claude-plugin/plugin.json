@@ -1,0 +1,10 @@
+{
+  "name": "agent-repo-guardrails",
+  "description": "Guardrails for a long-running agentic repo: a session-start ritual that tells the agent where it stands, a doc-size budget that keeps the state file readable, and an optional pre-tool refusal of the commands that must stay human-only. Reference implementation + threat model + measured failure modes.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Viswanath2808"
+  },
+  "license": "MIT",
+  "keywords": ["hooks", "guardrails", "session-start", "doc-budget", "pretooluse", "long-running"]
+}

@@ -1,0 +1,31 @@
+{
+  "description": "agent-repo-guardrails: session-start ritual (always) and the optional guard (no-op until .claude/guardrails.json sets guard.enabled). Exec form, node on PATH; measured 2026-10-22 on Windows: ${CLAUDE_PLUGIN_ROOT} substitutes, plugin SessionStart stdout reaches the model, a plugin PreToolUse exit 2 blocks even when a project hook allows.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/session-start.mjs"],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|PowerShell|Edit|Write|MultiEdit|NotebookEdit)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/guard.mjs"],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
