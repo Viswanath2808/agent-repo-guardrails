@@ -1,25 +1,25 @@
-﻿# agent-repo-guardrails
+# agent-repo-guardrails
 
 Guardrails for a repo that an AI coding agent works in for months: a reference implementation, a
 threat model, and a record of the failure modes that were measured while building it.
 
 ## 1. What it does
 
-At the start of every session it prints a short, factual status of the repo â€” branch, uncommitted
+At the start of every session it prints a short, factual status of the repo — branch, uncommitted
 files, how far the branch is behind its default, the last three commits, and how stale each
-`STATE.md` is â€” so the agent begins from what is true instead of from what it remembers. It ships a
+`STATE.md` is — so the agent begins from what is true instead of from what it remembers. It ships a
 doc-size gate that keeps the files an agent reads in full every session small, on bytes as well as
 lines, because a line budget is evaded by making lines longer. And it carries an optional pre-tool
 guard, **off by default**, that refuses git and `gh` write commands with a reason and a hand-over
 form, so a human authors every commit, push and pull request.
 
-## 2. What it does NOT defend against â€” read this before installing
+## 2. What it does NOT defend against — read this before installing
 
 The guard is a text matcher in front of a shell. It is built for one adversary: **the agent itself,
 cooperating**. Concretely, two cases:
 
-1. **An honest mistake** â€” the model misreads the task and emits a command it was told not to run.
-2. **A naive injection** â€” text in a file, a tool result or a pasted message talks the model into
+1. **An honest mistake** — the model misreads the task and emits a command it was told not to run.
+2. **A naive injection** — text in a file, a tool result or a pasted message talks the model into
    emitting such a command, written the way a cooperative engineer would write it.
 
 In both cases the command arrives in a plain spelling: no quote splicing, no `${IFS}`, no
@@ -30,7 +30,7 @@ deterministically, every time.
 cannot be held by text matching over bash and PowerShell, and this was measured, not assumed: on the
 implementation this plugin was reduced from, a fuzz run of 54,750 generated command strings, each
 executed against stub binaries in a sandbox (2026-09-28), found spellings that the guard allowed and
-the shell ran. Examples of the classes found â€” every one of them allowed:
+the shell ran. Examples of the classes found — every one of them allowed:
 
 | Class | Example |
 |---|---|
@@ -40,14 +40,14 @@ the shell ran. Examples of the classes found â€” every one of them allowed:
 | Redirect target never folded | `echo x > .cla''ude/settings.json` |
 | A bound variable as the write target | `t=.claude/settings.json ; rm $t` |
 | Bash backslash normalisation | `.clau\de/` is `.claude/` to bash |
-| Interpreter payloads scanned by substring only | `node -e` with `'.clau'+'de/â€¦'` |
-| Option permutation and unlisted writers | `sed $t -i â€¦`, `awk -i inplace`, `sort -o`, `perl -pi` |
+| Interpreter payloads scanned by substring only | `node -e` with `'.clau'+'de/…'` |
+| Option permutation and unlisted writers | `sed $t -i …`, `awk -i inplace`, `sort -o`, `perl -pi` |
 
 Each of these was left open on purpose. A parser rewrite went through twelve review rounds, and
 every round found a real bypass inside the previous round's fix; the closures that did hold refused
 ordinary commands such as `Set-Content "$(Get-Location)\out.txt"`. The guard's job is
 to make the plain mistake impossible, not to be a sandbox. **Defending against the adversarial
-class is the job of the layers in section 6** â€” the guard is never the only one.
+class is the job of the layers in section 6** — the guard is never the only one.
 
 What the plugin also does not do: it does not stop the agent reading anything, it does not watch
 MCP tools, and the doc gate and status ritual report rather than act (the ritual's one write is a
@@ -70,7 +70,7 @@ claude --plugin-dir path/to/agent-repo-guardrails
 ```
 
 Requirements: Node 20 or later on `PATH` (the hooks use exec form, `"command": "node"`). Zero
-dependencies â€” every script uses `node:` built-ins only, so there is no install step and no lockfile.
+dependencies — every script uses `node:` built-ins only, so there is no install step and no lockfile.
 
 After install, the session-start ritual runs on the next session. The doc gate runs when you call
 it. The guard does nothing until you turn it on (section 4.3).
@@ -109,7 +109,7 @@ ahead/behind against `origin/<default>` after a `git fetch` (offline, it says so
 fetched state); the last three commits; up to six tracked `*/STATE.md` files with the age of each
 one's last commit; the guard's posture; any config warnings. When the branch is behind, it prints
 the two checkout commands a human can run (detach and look, or start fresh work from the default
-branch), with a note first when uncommitted files would get in the way â€” it never runs them.
+branch), with a note first when uncommitted files would get in the way — it never runs them.
 
 Example output (line formats from `lib/ritual.mjs`; the values are made up):
 
@@ -141,7 +141,7 @@ inside a git work tree; `--help` prints the usage line. It lists
 markdown files with `git ls-files`, and walks the tree (skipping `node_modules` and `.git`) when the
 root is not a git repo.
 
-Shipped budgets â€” asymmetric on purpose, each matching how the file is read:
+Shipped budgets — asymmetric on purpose, each matching how the file is read:
 
 | Label | Matches | Budget | Why |
 |---|---|---|---|
@@ -152,29 +152,29 @@ Shipped budgets â€” asymmetric on purpose, each matching how the file is re
 
 **Why bytes as well as lines.** A line budget is evaded by making lines longer, and long-lived
 state files did exactly that without anyone deciding to. Measured 2026-10-08 on the repo this
-plugin comes from: one state file sat at 213 lines â€” a PASS on lines â€” and 81,654 bytes, longest
+plugin comes from: one state file sat at 213 lines — a PASS on lines — and 81,654 bytes, longest
 line 5,019 characters. That was about 26,500 tokens, over the agent's 25,000-token single-read
-page, so "read in full" took three reads. The byte budget is 240 lines Ã— ~100 characters; every
+page, so "read in full" took three reads. The byte budget is 240 lines × ~100 characters; every
 other state file in that repo was under it on the day it was set.
 
-**Zero-match guard.** If no file matches any rule, the gate says so loudly and exits `0` â€” an empty
+**Zero-match guard.** If no file matches any rule, the gate says so loudly and exits `0` — an empty
 repo is not a FAIL, but a pattern that silently stopped matching (for example after a directory
 move) must not read as green.
 
 | Key | Meaning |
 |---|---|
 | `budgets."<label>"` | Override a shipped budget, keyed by the label above, e.g. `{"project STATE": {"max": 300, "maxBytes": 30000}}`. |
-| `budgets.knownDebt` | Files already over budget on the day you adopt the gate: `{"<path>": {"bytes": <measured size>, "filed": "YYYY-MM-DD", "owner": "<who trims it>"}}` â€” `owner` is optional and is named in the DEBT line. |
+| `budgets.knownDebt` | Files already over budget on the day you adopt the gate: `{"<path>": {"bytes": <measured size>, "filed": "YYYY-MM-DD", "owner": "<who trims it>"}}` — `owner` is optional and is named in the DEBT line. |
 
 The override exists for file layouts this plugin cannot predict. **When a file FAILs, move content
-out of it (to its log, or a design doc) â€” do not raise the number.** Raising a budget accepts a
+out of it (to its log, or a design doc) — do not raise the number.** Raising a budget accepts a
 bigger context cost on every future session.
 
 `knownDebt` is a **self-deleting allowlist**. The size you file is a ceiling: the file reports DEBT
-instead of FAIL until it grows past the ceiling (FAIL) or drops under budget (FAIL â€” delete the
+instead of FAIL until it grows past the ceiling (FAIL) or drops under budget (FAIL — delete the
 entry). By convention, a trim that stays over budget re-files the lower number, so the ceiling only
-moves down â€” the gate reads the filed number fresh each run and cannot enforce this itself.
-An entry for a file that no longer matches a rule is a dead entry â€” FAIL. The plugin ships the list
+moves down — the gate reads the filed number fresh each run and cannot enforce this itself.
+An entry for a file that no longer matches a rule is a dead entry — FAIL. The plugin ships the list
 empty.
 
 Illustrative output:
@@ -200,14 +200,14 @@ every call, including on its own internal errors.
 
 **The `git-writes` arm.** Allowed: read-only forms such as `git status`, `log`, `diff`, `show`,
 `fetch`, `ls-files`, `rev-parse`, `branch --list`, and `gh pr view`, `list`, `checks`, `diff`.
-Refused: everything else â€” commit, push, merge, rebase, tag, branch creation, `gh pr create`,
+Refused: everything else — commit, push, merge, rebase, tag, branch creation, `gh pr create`,
 `gh api` with a write method or payload. It tokenises bash and PowerShell shapes, including `;`,
 `&`, `|`, `&&`, `$( )`, backticks and quoting, so `echo ok; git push` is refused as surely as
 `git push`.
 
 **Self-protection, always on while the guard is on.** The agent may not Edit, Write or
 shell-redirect into `.claude/guardrails.json`, `.claude/settings.json`,
-`.claude/settings.local.json`, anything under `.git/`, or any `guard.protectedPaths` entry â€” otherwise the first thing a mistaken agent could do is switch the
+`.claude/settings.local.json`, anything under `.git/`, or any `guard.protectedPaths` entry — otherwise the first thing a mistaken agent could do is switch the
 guard off. The plugin's own install directory is not protected: it is not in your repo.
 
 **A refusal is a stop.** The guard exits `2` and its message reaches the agent:
@@ -217,12 +217,12 @@ agent-repo-guardrails guard BLOCKED [git-writes]: git push: not on the read-only
 Hand this command to a human to run; read-only forms are allowed.
 ```
 
-The intended agent behaviour is to hand the exact command to the human and move on â€” not to retry
+The intended agent behaviour is to hand the exact command to the human and move on — not to retry
 it in another spelling. The skill shipped with this plugin says so in the agent's own context.
 
 **Fails closed.** In Claude Code, a `PreToolUse` hook blocks only on exit code `2`; every other
 non-zero exit is a non-blocking error, so a hook that crashes with exit `1` lets the command run.
-When the guard is on, every failure path â€” unparseable input, a thrown error â€” ends in exit `2`
+When the guard is on, every failure path — unparseable input, a thrown error — ends in exit `2`
 with a reason.
 
 ## 5. Measured failure modes
@@ -233,15 +233,15 @@ after a Claude Code upgrade.
 
 | What | How it was measured | Date | Re-proved by |
 |---|---|---|---|
-| A `PreToolUse` hook that exits with any code but `2` fails open | Read from the hooks contract when the source guard was built; the live build confirmed exit `0` never blocks (5 tool calls) â€” the non-`2` failure case is the documented contract, not a separate run | 2026-09-25 | `test/guard.test.mjs` (failure paths end in exit 2 when enabled) |
-| A plugin `PreToolUse` exit `2` blocks the call even when a project-level hook on the same event allows it; both hooks fire on one call | Throw-away plugin loaded with `--plugin-dir` beside a project hook, live session | 2026-10-22 | harness fact â€” re-measure |
-| A plugin `SessionStart` hook's stdout reaches the agent's context, the same as a settings hook's | Same throw-away plugin, marker line read back by the agent | 2026-10-22 | harness fact â€” re-measure |
-| `CLAUDE_PROJECT_DIR` is set for plugin hooks and equals the worktree the session started in | Same throw-away plugin, payload logged | 2026-10-22 | harness fact â€” re-measure |
-| On Windows, `CLAUDE_PLUGIN_ROOT` arrives with backslashes, contrary to the docs | Same throw-away plugin, value logged | 2026-10-22 | harness fact â€” no script reads the variable; each locates itself via `import.meta.url` |
-| Exec-form `"command": "node"` resolves without a hardcoded interpreter path | Same throw-away plugin, Windows host | 2026-10-22 | harness fact â€” re-measure |
-| A line budget is evaded by line length (213 lines PASS, 81,654 bytes) | Line and byte count of every state file in the source repo | 2026-10-08 | `test/doc-budget.test.mjs` (213 lines Ã— 380 chars: PASS lines, FAIL bytes) |
+| A `PreToolUse` hook that exits with any code but `2` fails open | Read from the hooks contract when the source guard was built; the live build confirmed exit `0` never blocks (5 tool calls) — the non-`2` failure case is the documented contract, not a separate run | 2026-09-25 | `test/guard.test.mjs` (failure paths end in exit 2 when enabled) |
+| A plugin `PreToolUse` exit `2` blocks the call even when a project-level hook on the same event allows it; both hooks fire on one call | Throw-away plugin loaded with `--plugin-dir` beside a project hook, live session | 2026-10-22 | harness fact — re-measure |
+| A plugin `SessionStart` hook's stdout reaches the agent's context, the same as a settings hook's | Same throw-away plugin, marker line read back by the agent | 2026-10-22 | harness fact — re-measure |
+| `CLAUDE_PROJECT_DIR` is set for plugin hooks and equals the worktree the session started in | Same throw-away plugin, payload logged | 2026-10-22 | harness fact — re-measure |
+| On Windows, `CLAUDE_PLUGIN_ROOT` arrives with backslashes, contrary to the docs | Same throw-away plugin, value logged | 2026-10-22 | harness fact — no script reads the variable; each locates itself via `import.meta.url` |
+| Exec-form `"command": "node"` resolves without a hardcoded interpreter path | Same throw-away plugin, Windows host | 2026-10-22 | harness fact — re-measure |
+| A line budget is evaded by line length (213 lines PASS, 81,654 bytes) | Line and byte count of every state file in the source repo | 2026-10-08 | `test/doc-budget.test.mjs` (213 lines × 380 chars: PASS lines, FAIL bytes) |
 | A posture line that cannot fail reads as evidence: in the source, a flat "armed" line stayed green while the guard's self-protection was lifted, because its two self-test commands were untouched by what had changed | Reading the posture arm against the change that lifted protection | 2026-09-27 | `test/ritual.test.mjs` (the guard line runs a deny and an allow fixture through `decide()` and prints `self-test FAILED` when either is wrong) |
-| Text matching cannot hold against an adversary (section 2 table) | 54,750 generated strings executed against stub binaries in a sandbox | 2026-09-28 | documented limit â€” not a test |
+| Text matching cannot hold against an adversary (section 2 table) | 54,750 generated strings executed against stub binaries in a sandbox | 2026-09-28 | documented limit — not a test |
 | Five false denies on everyday shapes (below) | Pure-function probe against the guard module, then 68 cases written before any fix | 2026-09-27 | `test/guard.test.mjs` |
 
 **The five false denies.** Each is a fail-closed rule firing on a shape that cannot hide an
@@ -252,11 +252,11 @@ because the arm that produced it was not ported (each row has a test in `test/gu
 
 | Refused | Why it was refused | Use instead |
 |---|---|---|
-| PowerShell assignment: `$x = 5`, `$u = [Environment]::â€¦` | The statement's head `$u` was read as an unresolvable command name | Inline the expression, or use the Bash tool |
+| PowerShell assignment: `$x = 5`, `$u = [Environment]::…` | The statement's head `$u` was read as an unresolvable command name | Inline the expression, or use the Bash tool |
 | A bare quoted literal as output: `'--- machine ---'` | Its leading dashes were read as an unrecognised flag | `Write-Host '--- machine ---'` / `echo` |
-| ~~A redirection counted as an argument: `<tool> -v 2>&1`~~ **Allowed in this plugin** | The original refusal came from a database-CLI arm that is not ported; `node -v 2>&1` is tested as allowed | â€” |
+| ~~A redirection counted as an argument: `<tool> -v 2>&1`~~ **Allowed in this plugin** | The original refusal came from a database-CLI arm that is not ported; `node -v 2>&1` is tested as allowed | — |
 | A flag inside an assignment's `$( )`: `b=$(grep -lE 'x' f)` | The assignment value ended at the first space, so the substitution's arguments became the head | Run `grep -lE 'x' f` directly |
-| A heredoc whose content names a guarded verb: `cat > f <<'EOF'` â€¦ `git push` â€¦ | Guarded-verb text flowing into a write is refused while the `git-writes` arm is on â€” correct as designed | Write the file with the Write tool |
+| A heredoc whose content names a guarded verb: `cat > f <<'EOF'` … `git push` … | Guarded-verb text flowing into a write is refused while the `git-writes` arm is on — correct as designed | Write the file with the Write tool |
 
 Two shapes the original refused by mistake are **fixed here, with tests**: `cmd /c echo hi` (the `/c`
 switch was read as a path to the project's drive root) and `node /abs/path/script.mjs` (any token
@@ -267,7 +267,7 @@ Method note, measured: three of those five came from using the guard for ordinar
 it, not from the bug report. Drive the guard through an hour of real work and it reports its own
 false denies.
 
-## 6. The layers beneath â€” the guard is never the only one
+## 6. The layers beneath — the guard is never the only one
 
 | Risk | The real control | What the guard adds |
 |---|---|---|
@@ -302,4 +302,4 @@ refs and `FETCH_HEAD` in your repo.
 
 ## 8. Licence
 
-MIT â€” see `LICENSE`. It covers the code, the tests and this README.
+MIT — see `LICENSE`. It covers the code, the tests and this README.
