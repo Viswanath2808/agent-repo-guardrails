@@ -1,6 +1,6 @@
 {
   "name": "agent-repo-guardrails",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Claude Code plugin: session-start ritual, doc-size budget gate, optional pre-tool guard. Zero dependencies.",
   "type": "module",
   "private": true,

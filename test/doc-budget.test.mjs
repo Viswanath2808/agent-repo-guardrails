@@ -166,7 +166,35 @@ test('project directories are one or two levels deep', () => {
   assert.equal(judge('a/STATE.md', doc(1, 1), noDebt).label, 'project STATE');
   assert.equal(judge('a/b/STATE.md', doc(1, 1), noDebt).label, 'project STATE');
   assert.equal(judge('a/b/c/STATE.md', doc(1, 1), noDebt), null);
-  assert.equal(judge('STATE.md', doc(1, 1), noDebt), null);
+  assert.equal(judge('a/b/c/LOG.md', doc(1, 1), noDebt), null);
+});
+
+// 0.1.1 -- a single-project repo keeps the four files at the root. Before this,
+// a root STATE.md matched no rule: the run said CLEAN and never measured it.
+test('single-project layout: a root STATE.md and LOG.md are budgeted', () => {
+  assert.equal(judge('STATE.md', doc(1, 1), noDebt).label, 'project STATE');
+  assert.equal(judge('LOG.md', doc(9000, 400), noDebt).status, 'UNLIMITED');
+  assert.equal(judge('STATE.md', doc(241, 10), noDebt).status, 'FAIL');
+  const wide = judge('STATE.md', doc(213, 380), noDebt);
+  assert.equal(wide.status, 'FAIL');
+  assert.match(wide.reason, /bytes > 24000/);
+});
+
+test('single-project layout: the root CLAUDE.md stays the router, never the project reference', () => {
+  assert.equal(judge('CLAUDE.md', doc(121, 10), noDebt).label, 'root router');
+  assert.equal(judge('CLAUDE.md', doc(121, 10), noDebt).status, 'FAIL');
+});
+
+test('single-project layout: evaluate FAILs an over-budget root STATE.md and a root knownDebt entry is live', () => {
+  const tree = { 'CLAUDE.md': doc(28, 60), 'STATE.md': doc(213, 380), 'LOG.md': doc(50, 80) };
+  const s = evaluate(Object.keys(tree), (f) => tree[f], { rules: RULES, debt: {} });
+  assert.equal(s.failed, 1);
+  assert.equal(s.results.find((r) => r.status === 'FAIL').file, 'STATE.md');
+  assert.deepEqual(s.unmatchedLabels, ['project reference']);
+  const bytes = Buffer.byteLength(tree['STATE.md']);
+  const d = evaluate(Object.keys(tree), (f) => tree[f], { rules: RULES, debt: { 'STATE.md': { bytes, filed: '2026-11-04' } } });
+  assert.equal(d.failed, 0);
+  assert.equal(d.debted, 1);
 });
 
 test('unbudgeted files return null, and near-miss names do not match', () => {

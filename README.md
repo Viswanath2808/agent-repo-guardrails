@@ -146,9 +146,15 @@ Shipped budgets — asymmetric on purpose, each matching how the file is read:
 | Label | Matches | Budget | Why |
 |---|---|---|---|
 | `root router` | `CLAUDE.md` at the root | 120 lines (warn 100) | Loaded every session; routing and global rules only. |
-| `project STATE` | `<dir>/STATE.md`, one or two levels deep | 240 lines **and** 24,000 bytes (warn 200 / 20,000) | Read in full at every session start. |
-| `project LOG` | `<dir>/LOG.md` | unlimited, by design | Append-only, grepped, never read whole. A growing log is the system working. |
-| `project reference` | `<dir>/CLAUDE.md` | 2,000 lines (warn 1,800) | Durable reference, read section by section. |
+| `project STATE` | `STATE.md` at the root, or `<dir>/STATE.md` one or two levels deep | 240 lines **and** 24,000 bytes (warn 200 / 20,000) | Read in full at every session start. |
+| `project LOG` | `LOG.md` at the root, or `<dir>/LOG.md` one or two levels deep | unlimited, by design | Append-only, grepped, never read whole. A growing log is the system working. |
+| `project reference` | `<dir>/CLAUDE.md`, one or two levels deep | 2,000 lines (warn 1,800) | Durable reference, read section by section. |
+
+**Single-project repos.** If the repo is one project, keep `STATE.md` and `LOG.md` at the root and
+they are budgeted there. The root `CLAUDE.md` is always the `root router`, so a single-project repo
+has no `project reference` and the run prints `note: matched zero files: project reference` — that
+line is expected. **Read the note on your first run:** a label you expected to see in it means the
+gate is not measuring that file.
 
 **Why bytes as well as lines.** A line budget is evaded by making lines longer, and long-lived
 state files did exactly that without anyone deciding to. Measured 2026-10-08 on the repo this
